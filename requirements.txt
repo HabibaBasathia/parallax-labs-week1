@@ -1,0 +1,5 @@
+datasets
+pandas
+sentence-transformers
+chromadb
+pytest
