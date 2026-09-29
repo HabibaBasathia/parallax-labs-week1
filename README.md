@@ -68,3 +68,79 @@ python -m pytest tests/
 - Embedding speed: ~20-25 ms per chunk.
 - Retrieval latency: ~15-20 ms per query.
 - All 7 unit tests passing (5 chunking, 2 preprocessing).
+
+
+---
+
+# Week 3: LLM Integration & Prompt Engineering
+
+## What I built
+This week wraps Week 2's retrieval pipeline with an LLM to generate actual answers:
+
+1. **LLM client** (`src/llm_client.py`) — calls Groq's free API using
+   `openai/gpt-oss-20b`, with automatic retries (up to 3 attempts) on rate
+   limits and connection errors, and a capped max output of 512 tokens.
+2. **Prompt template** (`src/prompt_template.py`) — a system prompt that
+   restricts the model to only using the retrieved context, and explicitly
+   instructs it to say "I don't have enough information..." when the
+   context doesn't cover the question.
+3. **RAG pipeline** (`src/rag_pipeline.py`) — the full flow: embed query →
+   retrieve top-3 chunks from ChromaDB → check retrieval distance against
+   a threshold to catch out-of-domain questions *before* calling the LLM →
+   build prompt → call LLM → log retrieval/generation/total latency.
+4. **Test script** (`scripts/test_rag.py`) — runs sample questions through
+   the pipeline, including one intentionally off-topic question, to verify
+   the hallucination guard works.
+
+## Prompt engineering approach
+- System prompt explicitly forbids using outside knowledge and gives an
+  exact fallback phrase for insufficient context, rather than letting the
+  model improvise a refusal (keeps behavior consistent and testable).
+- Context chunks are labeled (`[Context 1]`, `[Context 2]`, ...) so the
+  model can distinguish between separate retrieved passages.
+- Temperature set to 0.2 to reduce creative drift and keep answers close
+  to the source material.
+
+## Hallucination / out-of-domain handling
+Two layers of defense:
+1. **Retrieval-level check** — if ChromaDB's closest match distance exceeds
+   a threshold (1.3), the question is treated as out-of-domain and the LLM
+   is never called (saves latency and avoids the model guessing).
+2. **Prompt-level guard** — even when context is retrieved, the system
+   prompt forces the model to only use that context and to explicitly
+   decline if it's insufficient.
+
+Verified with a test question ("What is the capital of France?") against
+a story-text corpus — correctly returned the fallback message instead of
+answering from general knowledge.
+
+## Error handling
+`llm_client.py` retries up to 3 times on rate limit or connection errors
+(5s delay between attempts) before returning a clear error string instead
+of crashing. This was validated for real during development: the originally
+planned model (`llama-3.1-8b-instant`) was deprecated by Groq on
+2026-08-16, and the API's 404 error was caught and surfaced clearly rather
+than crashing the pipeline, prompting a switch to `openai/gpt-oss-20b`.
+
+## How to run
+```bash
+venv\Scripts\activate
+pip install -r requirements.txt
+
+# Make sure .env contains: GROQ_API_KEY=your_key_here
+
+# Run the full chunk -> embed -> ingest pipeline (Week 2, if not already run)
+python run_pipeline.py
+
+# Run the RAG test questions (retrieval + generation + latency)
+python -m scripts.test_rag
+
+# Run unit tests
+python -m pytest tests/
+```
+
+## Results
+- All in-domain test questions answered correctly using only retrieved context.
+- Off-topic question correctly triggered the "insufficient information" fallback.
+- Typical latency after model warm-up: ~0.03-0.05s retrieval, ~1-1.5s generation.
+- All 7 unit tests passing.
