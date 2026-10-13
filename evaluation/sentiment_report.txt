@@ -1,0 +1,22 @@
+SENTIMENT EVALUATION (VADER vs my manual labels)
+==================================================
+Chunks checked: 20
+Correct: 17
+Accuracy: 85.0%
+
+My label -> VADER label : how many
+  negative -> negative : 2
+  negative -> neutral : 1
+  negative -> positive : 2
+  positive -> positive : 15
+
+Disagreements (3):
+--------------------------------------------------
+Me: negative | VADER: neutral
+Anna loved her doll very much. She named her doll Lily and played with her every day. Lily had a pink dress, blue eyes and long hair. Anna liked to brush her hair and make her look pretty. One day, Anna and Lily went outside to play in the garden. Anna was very enthusiastic and ran around with Lily 
+--------------------------------------------------
+Me: negative | VADER: positive
+time at the golden horn on the top of the carriage time at the golden horn on the top of the carriage She waved goodbye as the carriage drove away and she imagined that one day, when she was older, she'd have a carriage of her own.
+--------------------------------------------------
+Me: negative | VADER: positive
+ed to grab the helicopter. But Tommy was too quick ed to grab the helicopter. But Tommy was too quick He threw the helicopter as far away as he could. The mean boy chased the helicopter, but Tommy ran the other way. He was safe now. After that day, Tommy never saw the mean boy again. He would always

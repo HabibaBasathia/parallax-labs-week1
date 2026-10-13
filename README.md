@@ -144,3 +144,103 @@ python -m pytest tests/
 - Off-topic question correctly triggered the "insufficient information" fallback.
 - Typical latency after model warm-up: ~0.03-0.05s retrieval, ~1-1.5s generation.
 - All 7 unit tests passing.
+
+
+---
+
+# Week 4: NLP Analysis (Topic & Sentiment)
+
+## What I built
+This week adds NLP labels (metadata) to every chunk in ChromaDB, so search
+can be filtered by topic and sentiment:
+
+1. **NLP helpers** (`src/nlp_analysis.py`) - sentiment with VADER, and topic
+   modeling with LDA (scikit-learn, 8 topics, each named by its top 3 words).
+2. **Enrichment script** (`scripts/enrich_corpus.py`) - labels all 11,161
+   chunks and saves `topic` and `sentiment` into ChromaDB metadata, keeping
+   the old metadata.
+3. **Manual labeling** (`scripts/make_label_set.py`) - shows 20 random chunks
+   so I can label them by hand (without seeing VADER's answer).
+4. **Evaluation** (`scripts/evaluate_sentiment.py`) - compares VADER with my
+   labels. Report saved in `evaluation/sentiment_report.txt`.
+5. **Filtered retrieval** (`scripts/test_filtered_retrieval.py`) - searches
+   by meaning plus filters (sentiment, topic, or both) and logs latency.
+6. **Unit tests** (`tests/test_nlp_analysis.py`) - 7 tests for sentiment,
+   topic assignment and edge cases.
+
+## Why LDA and VADER
+I chose LDA because BERTopic often fails to install on Windows and needs
+heavy models. LDA is simple, fast and reproducible (fixed random seed).
+VADER needs no model download and runs fast on thousands of chunks.
+
+## Results
+
+**Topics found:** little_day_man, said_mom_mommy, timmy_play_day,
+bird_happy_day, tree_day_big, lily_ben_tom, lily_mom_said, happy_car_day.
+The topics are mostly character names plus common story words. The corpus
+is children's stories, where the same names and words repeat a lot, so LDA
+groups by characters more than by true themes.
+
+**Sentiment counts (11,161 chunks):** positive 9,532, negative 1,533,
+neutral 96.
+
+**Sentiment accuracy:** VADER matched my manual labels on 17 of 20 chunks
+(**85%**). Details are in `evaluation/sentiment_report.txt`.
+
+**Limits of the evaluation:**
+- The test set is small (20 chunks), and 15 of them were positive, so a
+  tool that always said "positive" would already score about 75%.
+- All 3 mistakes were chunks I labeled negative. A chunk is a piece cut
+  from the middle of a story, and it can sound happy on its own while the
+  story around it is sad. VADER only reads the words in the chunk, so it
+  cannot see that. For example, a chunk about a sad boy who "was starting
+  to feel better" was labeled positive.
+
+## Edge cases handled
+- Chunks shorter than 5 words get the topic `uncategorized`.
+- Chunks with only rare or unknown words (jargon) get `uncategorized`.
+- Words that appear in fewer than 5 chunks are ignored when learning topics.
+- Empty text gets the sentiment `neutral`.
+- A filter that matches nothing returns an empty result and does not crash.
+
+## Filtered retrieval and latency
+Query used: "a child is sad and cries".
+
+| Test | Latency |
+|---|---|
+| 1) No filter (first search, includes one-time startup) | 7784.8 ms |
+| 2) Positive only | 67.1 ms |
+| 3) Negative only | 28.5 ms |
+| 4) One topic | 26.2 ms |
+| 5) Topic and negative | 30.6 ms |
+| 6) Filter with no match | 17.5 ms |
+
+The 7.8 s for test 1 is a one-time startup cost (loading the embedding model
+and database), not the cost of searching. Filtered searches took 17-67 ms,
+so filtering is fast. I did not measure an unfiltered search after warm-up,
+so I can't give an exact filtering overhead.
+
+Filters work: the negative filter returned only negative chunks, and the
+topic + negative filter returned only chunks with both labels.
+
+## How to run
+```bash
+venv\Scripts\activate
+pip install -r requirements.txt
+
+# Week 2 pipeline, if not already run
+python run_pipeline.py
+
+# Add topic + sentiment labels to ChromaDB
+python -m scripts.enrich_corpus
+
+# Label 20 chunks by hand, then check VADER's accuracy
+python -m scripts.make_label_set
+python -m scripts.evaluate_sentiment
+
+# Try filtered search
+python -m scripts.test_filtered_retrieval
+
+# Run all unit tests
+python -m pytest tests/
+```
