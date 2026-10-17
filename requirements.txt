@@ -5,3 +5,8 @@ chromadb
 pytest
 groq
 python-dotenv
+scikit-learn
+vaderSentiment
+fastapi
+uvicorn
+httpx

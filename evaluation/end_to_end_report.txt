@@ -1,0 +1,36 @@
+END-TO-END EVALUATION
+==================================================
+In-domain questions: 19
+Graded: 19 (API errors: 0, grader failures: 0)
+Correct answers: 12/19 (63%)
+Refused (said 'not enough information'): 4/19
+Accuracy when the source chunk WAS retrieved: 11/13 (85%)
+Accuracy when the source chunk was NOT retrieved: 1/6 (17%)
+Off-topic questions refused: 3/3
+
+Average retrieval time: 0.059 s
+Average generation time: 0.752 s
+Average total time: 0.811 s
+Slowest total time: 1.479 s
+
+PER QUESTION
+--------------------------------------------------
+ 1 | refused  | correct=False | source_retrieved=True  | 1.48s | What caused the loud yell that Fred heard during his adventu
+ 2 | answered | correct=False | source_retrieved=False | 1.00s | What did Tom do to help Max feel better?
+ 3 | answered | correct=True  | source_retrieved=False | 0.77s | What sound did Joe hear repeatedly while searching for his b
+ 4 | answered | correct=True  | source_retrieved=True  | 0.83s | How did the puppy feel while trotting beside his owner on th
+ 5 | answered | correct=True  | source_retrieved=True  | 0.85s | What did John and Sam do after they caught the animal?
+ 6 | answered | correct=True  | source_retrieved=True  | 0.53s | What sound did the mouse hear after opening the cave door?
+ 7 | answered | correct=True  | source_retrieved=True  | 0.64s | What game did Bob and Sarah decide to play together?
+ 8 | answered | correct=True  | source_retrieved=True  | 0.43s | What did the animals thank the big muffin for?
+ 9 | answered | correct=True  | source_retrieved=True  | 0.63s | What did the family pledge to do whenever they felt scared?
+10 | answered | correct=True  | source_retrieved=True  | 0.79s | What activity were Mummy and Grandma engaged in while the ba
+11 | answered | correct=False | source_retrieved=False | 1.04s | What made Lily happy at the end of the passage?
+12 | answered | correct=True  | source_retrieved=True  | 0.53s | How did the other shoppers in the store react when the littl
+13 | refused  | correct=False | source_retrieved=False | 0.84s | Which animal was sleeping on the big rock inside the tent?
+14 | answered | correct=False | source_retrieved=True  | 1.05s | What did the bear do after he finished picking berries?
+15 | refused  | correct=False | source_retrieved=False | 0.83s | What did Ben find on the shelf?
+16 | refused  | correct=False | source_retrieved=False | 0.73s | What did the mother suggest Sara and Ben might do after they
+17 | answered | correct=True  | source_retrieved=True  | 0.63s | What action did Timmy take after noticing the missile in the
+18 | answered | correct=True  | source_retrieved=True  | 1.17s | How did Lily’s mother respond when Lily asked if they could 
+19 | answered | correct=True  | source_retrieved=True  | 0.63s | What did Jimmy notice about the man's dog when it approached

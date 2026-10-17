@@ -244,3 +244,69 @@ python -m scripts.test_filtered_retrieval
 # Run all unit tests
 python -m pytest tests/
 ```
+
+---
+
+# Week 5: Evaluation & API (FastAPI)
+
+## What I built
+1. **FastAPI service** (`src/api.py`) - the RAG system behind web endpoints:
+   - `GET /health` - checks that the service is alive.
+   - `POST /search` - semantic search with optional `topic` and `sentiment` filters (Week 4 metadata).
+   - `POST /ask` - full RAG pipeline (retrieve, then generate), returns the answer and timings.
+2. **Request logging** - middleware logs one line per request with the method, path, status code and duration.
+3. **Error handling:**
+   - **422** - wrong or missing input fields (handled automatically by Pydantic).
+   - **400** - valid type but unacceptable input (blank query or question, unknown sentiment).
+   - **500** - internal failure (database error, or the LLM call failed).
+4. **Test set builder** (`scripts/make_testset.py`) - the LLM writes one question for each of 20 random chunks. Relevant chunks for a question = all chunks from the same story. Saved to `evaluation/testset.json` (19 questions; the LLM returned an empty reply for one).
+5. **Retrieval evaluation** (`scripts/evaluate_retrieval.py`) - Precision@K and Recall@K. Report: `evaluation/retrieval_report.txt`.
+6. **End-to-end evaluation** (`scripts/evaluate_end_to_end.py`) - runs the full pipeline, grades answers with an LLM grader, tests off-topic questions, and logs latency. Report: `evaluation/end_to_end_report.txt`.
+7. **API tests** (`tests/test_api.py`) - 15 pytest tests. The database and LLM are replaced with fakes, so the tests are fast and can trigger a 500 on purpose.
+
+## Retrieval results (19 questions)
+| K | Precision@K | Recall@K | Source chunk found |
+|---|---|---|---|
+| 1 | 0.74 | 0.37 | 9/19 |
+| 3 | 0.40 | 0.60 | 13/19 |
+| 5 | 0.25 | 0.61 | 13/19 |
+
+Average search time: 17.7 ms.
+
+- The top result is from the correct story 74% of the time (Precision@1).
+- Recall rises from 0.37 to 0.60 between K=1 and K=3, then stays flat at K=5. A larger K only adds noise, which supports using `TOP_K = 3`.
+- Precision@5 is low partly because a story has only 2.4 relevant chunks on average, so it cannot go above about 0.48.
+- 6 of 19 questions did not find their source chunk in the top 5. Many of these are general questions ("What did Ben find on the shelf?") and many stories share the same character names.
+
+## End-to-end results (19 in-domain + 3 off-topic questions)
+- Correct answers: **12/19 (63%)**. Refusals count as wrong here.
+- Refused ("not enough information"): 4/19. Of the 15 questions it actually answered, 12 were correct (80%).
+- Accuracy when the source chunk **was** retrieved: **11/13 (85%)**.
+- Accuracy when the source chunk was **not** retrieved: **1/6 (17%)**.
+- Off-topic questions refused: **3/3**.
+- Latency: retrieval 0.059 s, generation 0.752 s, total **0.811 s** on average. Slowest question: 1.479 s.
+
+**Main finding:** answer quality depends on retrieval. When search finds the right chunk, answers are mostly correct. When it misses, the system usually refuses (the hallucination guard works) or answers wrongly. Future work: better retrieval (larger chunks, re-ranking, combining metadata filters).
+
+## Limits of the evaluation
+- Small test set (19 questions).
+- "Relevant" means the same story. A chunk from another story could also answer a general question, so real retrieval quality is probably a bit higher than measured.
+- The questions are written by an LLM from a chunk, and answers are graded by an LLM that sees only the source chunk. Both can be too strict or too lenient. The grader was not checked by hand.
+
+## How to run
+```bash
+venv\Scripts\activate
+pip install -r requirements.txt
+
+# Start the API, then open http://127.0.0.1:8000/docs to try the endpoints
+python -m uvicorn src.api:app --reload
+
+# Build the test set, then run both evaluations
+python -m scripts.make_testset
+python -m scripts.evaluate_retrieval
+python -m scripts.evaluate_end_to_end
+
+# Run all unit tests (29 tests)
+python -m pytest tests/
+```
+Note: stop the API (Ctrl+C) before running the scripts, so two programs do not use the database at once.

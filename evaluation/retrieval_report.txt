@@ -1,0 +1,30 @@
+RETRIEVAL EVALUATION
+==================================================
+Test questions: 19
+Average relevant chunks per question: 2.4
+Average search time: 17.7 ms
+
+K | Precision@K | Recall@K | Source chunk found
+1 | 0.74        | 0.37     | 9/19
+3 | 0.40        | 0.60     | 13/19
+5 | 0.25        | 0.61     | 13/19
+
+Questions where the source chunk was NOT in the top 5: 6
+--------------------------------------------------
+Q: What did Tom do to help Max feel better?
+Source text: Once upon a time, there was a thoughtful cat named Tom. Tom loved to help his friends. One day, Tom's friend, a dog named Max, was very tired. Tom had an idea. He would give Max a massage to help him 
+--------------------------------------------------
+Q: What sound did Joe hear repeatedly while searching for his baseball?
+Source text: Once upon a time there was a boy named Joe. Joe loved baseball. One day he wanted to play with his friends in the park. He went outside wearing a big hat and hunkered down to find his baseball. As Joe
+--------------------------------------------------
+Q: What made Lily happy at the end of the passage?
+Source text: icult too, but they kept trying just like Lily did icult too, but they kept trying just like Lily did After a while, everyone was able to ride the new bike with pedals. Lily was happy that she introdu
+--------------------------------------------------
+Q: Which animal was sleeping on the big rock inside the tent?
+Source text: Tim and Mia are playing in the park. They see a big tent with many animals inside. They want to go and look at them. "Can we go, Mom?" Tim asks. "OK, but be careful and stay close to me," Mom says. Th
+--------------------------------------------------
+Q: What did Ben find on the shelf?
+Source text: Bella and Ben were playing with their toy cars in the living room. They liked to make vroom and beep sounds as they drove them around. Bella had a red car and Ben had a blue one. They pretended they w
+--------------------------------------------------
+Q: What did the mother suggest Sara and Ben might do after they enjoyed the salad?
+Source text: said, "Here you go. There's some celery in it too said, "Here you go. There's some celery in it too Do you like celery?" Sara and Ben looked at the real celery. It looked like the toy celery, but it w
