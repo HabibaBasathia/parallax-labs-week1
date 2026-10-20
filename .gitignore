@@ -1,5 +1,7 @@
-venv/ 
+venv/
 .env
 data/raw/
 data/processed/
 data/chroma_db/
+__pycache__/
+.pytest_cache/

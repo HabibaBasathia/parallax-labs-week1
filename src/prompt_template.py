@@ -4,7 +4,9 @@ hallucination guard: it forces the model to answer ONLY from the
 provided context, and to say so explicitly when it can't.
 """
 
-SYSTEM_PROMPT = """You are a helpful assistant that answers questions using ONLY the context provided below.
+from typing import List
+
+SYSTEM_PROMPT: str = """You are a helpful assistant that answers questions using ONLY the context provided below.
 
 Rules you must follow:
 1. Only use information found in the context. Do not use outside knowledge.
@@ -13,10 +15,19 @@ Rules you must follow:
 4. Keep answers concise and directly relevant to the question."""
 
 
-def build_user_prompt(question: str, context_chunks: list[str]) -> str:
+def build_user_prompt(question: str, context_chunks: List[str]) -> str:
     """
-    Combines the retrieved chunks into a labeled context block,
-    followed by the user's question.
+    Combine the retrieved chunks and the question into one prompt.
+
+    Each chunk is labeled ([Context 1], [Context 2], ...) so the model can
+    tell the passages apart.
+
+    Args:
+        question: The user's question.
+        context_chunks: The retrieved chunk texts. May be empty.
+
+    Returns:
+        The full prompt text to send as the user message.
     """
     if not context_chunks:
         context_text = "(No relevant context was retrieved.)"

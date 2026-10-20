@@ -1,14 +1,21 @@
 """
 FastAPI app that wraps the RAG system.
-Endpoints: GET /health, POST /search, POST /ask
+
+Endpoints:
+    GET  /health  - check that the service is alive
+    POST /search  - semantic search with optional topic / sentiment filters
+    POST /ask     - full RAG pipeline (retrieve, then generate an answer)
+
+Run with: python -m uvicorn src.api:app --reload
+Then open http://127.0.0.1:8000/docs to try the endpoints.
 """
 
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from src.embeddings import embed_chunks
@@ -22,8 +29,8 @@ VALID_SENTIMENTS = {"positive", "negative", "neutral"}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Load the embedding model once at startup, so the first request is not slow
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Load the embedding model once at startup, so the first request is not slow."""
     logger.info("Warming up embedding model...")
     embed_chunks(["warm up"])
     yield
@@ -35,7 +42,10 @@ app = FastAPI(title="RAG API", lifespan=lifespan)
 # ---------- Request logging ----------
 
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def log_requests(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """Log one line per request: method, path, status code and duration."""
     start = time.perf_counter()
     response = await call_next(request)
     duration_ms = (time.perf_counter() - start) * 1000
@@ -52,6 +62,8 @@ async def log_requests(request: Request, call_next):
 # ---------- Request shapes (FastAPI returns 422 if these are wrong) ----------
 
 class SearchRequest(BaseModel):
+    """Body of POST /search."""
+
     query: str = Field(..., min_length=1, max_length=1000)
     top_k: int = Field(3, ge=1, le=20)
     sentiment: Optional[str] = None
@@ -59,14 +71,26 @@ class SearchRequest(BaseModel):
 
 
 class AskRequest(BaseModel):
+    """Body of POST /ask."""
+
     question: str = Field(..., min_length=1, max_length=1000)
 
 
 # ---------- Helpers ----------
 
-def build_where(sentiment: Optional[str], topic: Optional[str]):
-    """Turns the optional filters into a ChromaDB 'where' filter."""
-    conditions = []
+def build_where(sentiment: Optional[str], topic: Optional[str]) -> Optional[Dict[str, Any]]:
+    """
+    Turn the optional filters into a ChromaDB "where" filter.
+
+    Args:
+        sentiment: "positive", "negative", "neutral", or None for no filter.
+        topic: A topic name, or None for no filter.
+
+    Returns:
+        None if no filter is set, a single condition if one is set, or an
+        "$and" of both conditions.
+    """
+    conditions: List[Dict[str, str]] = []
     if sentiment:
         conditions.append({"sentiment": sentiment})
     if topic:
@@ -79,8 +103,21 @@ def build_where(sentiment: Optional[str], topic: Optional[str]):
     return {"$and": conditions}
 
 
-def run_search(query: str, top_k: int, where):
-    """Embeds the query and searches ChromaDB. Returns a list of results."""
+def run_search(
+    query: str, top_k: int, where: Optional[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Embed the query and search ChromaDB.
+
+    Args:
+        query: The search text.
+        top_k: How many chunks to return.
+        where: Optional ChromaDB filter from build_where.
+
+    Returns:
+        A list of results, each with id, text, distance, topic and
+        sentiment. A lower distance means a closer match.
+    """
     collection = get_collection()
     query_embedding, _, _ = embed_chunks([query])
     results = collection.query(
@@ -109,12 +146,21 @@ def run_search(query: str, top_k: int, where):
 # ---------- Endpoints ----------
 
 @app.get("/health")
-def health():
+def health() -> Dict[str, str]:
+    """Return {"status": "ok"} if the service is running."""
     return {"status": "ok"}
 
 
 @app.post("/search")
-def search(req: SearchRequest):
+def search(req: SearchRequest) -> Dict[str, Any]:
+    """
+    Semantic search over the chunks, with optional topic / sentiment filters.
+
+    Errors:
+        400: blank query, or a sentiment that is not positive/negative/neutral.
+        422: wrong or missing fields (handled by FastAPI).
+        500: an internal error while searching.
+    """
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be blank.")
     if req.sentiment and req.sentiment not in VALID_SENTIMENTS:
@@ -140,7 +186,17 @@ def search(req: SearchRequest):
 
 
 @app.post("/ask")
-def ask(req: AskRequest):
+def ask(req: AskRequest) -> Dict[str, Any]:
+    """
+    Answer a question with the full RAG pipeline.
+
+    Returns the answer, the retrieved chunks and the latency breakdown.
+
+    Errors:
+        400: blank question.
+        422: wrong or missing fields (handled by FastAPI).
+        500: an internal error, or the LLM call failed.
+    """
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be blank.")
 

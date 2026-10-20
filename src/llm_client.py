@@ -5,20 +5,28 @@ and timeouts, so a single blip doesn't crash the whole pipeline.
 
 import os
 import time
-from groq import Groq, APIError, APIConnectionError, RateLimitError
+from typing import Optional
+
 from dotenv import load_dotenv
+from groq import APIConnectionError, APIError, Groq, RateLimitError
 
 load_dotenv()  # reads GROQ_API_KEY from .env
 
-MODEL_NAME = "openai/gpt-oss-20b"
-MAX_RETRIES = 3
-RETRY_DELAY_SECONDS = 5
-MAX_OUTPUT_TOKENS = 512
+MODEL_NAME: str = "openai/gpt-oss-20b"
+MAX_RETRIES: int = 3
+RETRY_DELAY_SECONDS: int = 5
+MAX_OUTPUT_TOKENS: int = 512
 
-_client = None
+_client: Optional[Groq] = None
 
 
 def get_client() -> Groq:
+    """
+    Create the Groq client on first use, then reuse it.
+
+    Raises:
+        ValueError: If GROQ_API_KEY is missing from the .env file.
+    """
     global _client
     if _client is None:
         api_key = os.getenv("GROQ_API_KEY")
@@ -33,9 +41,16 @@ def get_client() -> Groq:
 
 def call_llm(system_prompt: str, user_prompt: str) -> str:
     """
-    Calls the LLM with retries on rate limits / connection errors.
-    Returns the model's text response, or a clear error message string
-    if all retries fail (never raises up to the caller).
+    Send a prompt to the LLM, retrying on rate limits and connection errors.
+
+    Args:
+        system_prompt: Instructions that tell the model how to behave.
+        user_prompt: The actual question, including any context.
+
+    Returns:
+        The model's text answer. If all retries fail, a string starting
+        with "Error:" is returned instead of raising, so callers can
+        check for it.
     """
     client = get_client()
 

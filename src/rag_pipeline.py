@@ -5,21 +5,38 @@ build prompt -> call LLM -> log latency at each stage.
 """
 
 import time
-from src.embeddings import embed_chunks
-from src.vector_store import get_collection
-from src.prompt_template import SYSTEM_PROMPT, build_user_prompt
-from src.llm_client import call_llm
+from typing import Any, Dict
 
-TOP_K = 3
+from src.embeddings import embed_chunks
+from src.llm_client import call_llm
+from src.prompt_template import SYSTEM_PROMPT, build_user_prompt
+from src.vector_store import get_collection
+
+TOP_K: int = 3
 # ChromaDB's default distance is L2 (squared euclidean); LOWER = more similar.
 # Anything above this threshold is treated as "not relevant enough" -> out of domain.
-DISTANCE_THRESHOLD = 1.3
+DISTANCE_THRESHOLD: float = 1.3
 
 
-def answer_question(question: str) -> dict:
+def answer_question(question: str) -> Dict[str, Any]:
     """
-    Runs the full RAG pipeline for one question.
-    Returns a dict with the answer, retrieved chunks, and timing breakdown.
+    Run the full RAG pipeline for one question.
+
+    Steps: embed the question, retrieve the top chunks, skip the LLM if
+    even the best chunk is too far away (out of domain), otherwise build
+    the prompt and ask the LLM.
+
+    Args:
+        question: The user's question.
+
+    Returns:
+        A dict with these keys:
+            answer: The answer text (or the refusal message).
+            retrieved_chunks: The chunk texts that were retrieved.
+            out_of_domain: True if the LLM was skipped as off-topic.
+            retrieval_time_s: Seconds spent on embedding and search.
+            generation_time_s: Seconds spent on the LLM call (0 if skipped).
+            total_time_s: Total seconds for the whole call.
     """
     overall_start = time.perf_counter()
 

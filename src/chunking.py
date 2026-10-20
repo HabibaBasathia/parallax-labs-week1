@@ -7,21 +7,32 @@ pieces that are still too large. This keeps semantically related text
 together as much as possible, which helps embedding quality later.
 """
 
-from typing import List
+from typing import List, Optional
 
-DEFAULT_SEPARATORS = ["\n\n", ". ", " "]  # paragraph -> sentence -> word
+DEFAULT_SEPARATORS: List[str] = ["\n\n", ". ", " "]  # paragraph -> sentence -> word
 
 
 def recursive_chunk(
     text: str,
     chunk_size: int = 500,
     chunk_overlap: int = 50,
-    separators: List[str] = None,
+    separators: Optional[List[str]] = None,
 ) -> List[str]:
     """
-    Split `text` into chunks of at most `chunk_size` characters,
-    with `chunk_overlap` characters repeated between consecutive chunks
-    so context isn't lost at chunk boundaries.
+    Split text into overlapping chunks using recursive splitting.
+
+    Args:
+        text: The text to split.
+        chunk_size: Maximum characters per chunk (before overlap is added).
+        chunk_overlap: Characters from the end of the previous chunk that
+            are repeated at the start of the next one, so context is not
+            lost at chunk boundaries.
+        separators: Split points to try, biggest first. Defaults to
+            paragraph, then sentence, then word.
+
+    Returns:
+        A list of chunks. An empty list if the text is empty or only
+        whitespace.
     """
     if not text or not text.strip():
         return []
@@ -41,7 +52,7 @@ def recursive_chunk(
     else:
         pieces = list(text)  # last resort: char-level split
 
-    chunks = []
+    chunks: List[str] = []
     current = ""
 
     for piece in pieces:
