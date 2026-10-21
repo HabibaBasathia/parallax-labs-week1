@@ -9,10 +9,10 @@ Built for the Parallax Labs ML engineering internship (Weeks 1 to 6).
 | Area | Result |
 |---|---|
 | Corpus | 5,000 stories, 11,161 chunks (500 characters, 50 overlap) |
-| Retrieval | Precision@1 = 0.74, Recall@3 = 0.60, average search time 17.7 ms |
+| Retrieval | Precision@1 = 0.74, Recall@3 = 0.60, average search time 33.7 ms |
 | Answer quality | 12/19 correct (63%); 11/13 (85%) when the right chunk was retrieved |
 | Hallucination guard | 3/3 off-topic questions refused |
-| End-to-end latency | 0.81 s average, 1.48 s slowest |V
+| End-to-end latency | 0.81 s average, 1.48 s slowest |
 | Sentiment (VADER) | 85% agreement with my manual labels (17/20) |
 | Tests | 29 passing |
 
@@ -216,7 +216,7 @@ An LLM wrote one question for each of 19 random chunks. A chunk counts as releva
 | 3 | 0.40 | 0.60 | 13/19 |
 | 5 | 0.25 | 0.61 | 13/19 |
 
-Average search time (embedding + search): 17.7 ms. A story has only 2.4 relevant chunks on average, so Precision@5 cannot exceed about 0.48. Six of 19 questions did not find their source chunk in the top 5; many are general ("What did Ben find on the shelf?") and many stories share character names.
+Average search time (embedding + search): 33.7 ms. A story has only 2.4 relevant chunks on average, so Precision@5 cannot exceed about 0.48. Six of 19 questions did not find their source chunk in the top 5; many are general ("What did Ben find on the shelf?") and many stories share character names.
 
 ### End-to-end (19 in-domain + 3 off-topic questions)
 
